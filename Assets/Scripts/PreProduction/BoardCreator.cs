@@ -15,6 +15,7 @@ public class BoardCreator : MonoBehaviour {
 
     // create the Selection Indicator whenever we need to use it through Lazy Loading
     // it's a transform to track position in world space
+    private Transform _marker = null;
     public Transform marker
     {
         get
@@ -27,7 +28,6 @@ public class BoardCreator : MonoBehaviour {
             return _marker;
         }
     }
-    private Transform _marker;
 
     // max ranges of the board
     public int width = 10; // number of units in X direction in world space
@@ -48,7 +48,8 @@ public class BoardCreator : MonoBehaviour {
         // destroys every child of this gameObject aka every tile on the board
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
-        tiles.Clear(); // clear the dictionary
+        tiles.Clear(); // clear the tile dictionary
+        obstacles.Clear(); // clear obstacle dictionary
         _terrainType = "Sand"; // reset terrainType to Sand
     }
 
@@ -56,6 +57,13 @@ public class BoardCreator : MonoBehaviour {
     public void SetTileType(string type)
     {
         _terrainType = type;
+    }
+
+    // change the terrain type of the selected tile
+    public void ChangeSingleTileType(string type)
+    {
+        Tile t = tiles.ContainsKey(pos) ? tiles[pos] : null;
+        t.Load(t.pos, t.height, type);
     }
 
     // modify individual tiles at a time
