@@ -1,14 +1,25 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEditor;
+using System.Collections.Generic;
 
 // add a custom editor for board creation
 [CustomEditor(typeof(BoardCreator))]
 public class BoardCreatorInspector : Editor {
+    // options for generating new tiles
     string[] _tileTypeOptions = { "Random", "Sand", "Grass", "Water" };
     int _tileTypeIndex = 1;
-    
-    // make sure out target is of the righ type (BoardCreator)
+    // options for changing existing tiles
+    string[] _changeTileTypeOptions = { "Sand", "Grass", "Water" };
+    int _changeSingleTileIndex = 0;
+
+    // options for changing existing tiles
+    string[] _contentOptions = { "Obstacle", "TestObstacle" };
+    int _contentIndex = 0;
+
+    string levelName;
+
+    // make sure out target is of the right type (BoardCreator)
     public BoardCreator current
     {
         get
@@ -27,11 +38,18 @@ public class BoardCreatorInspector : Editor {
         {
             current.Clear();
             _tileTypeIndex = 1;
+            _changeSingleTileIndex = 0;
         }
 
+        // generate new tiles
         _tileTypeIndex = EditorGUILayout.Popup(_tileTypeIndex, _tileTypeOptions);
         if (GUILayout.Button("Set Tile Type"))
             current.SetTileType(_tileTypeOptions[_tileTypeIndex]);
+
+        // change existing tiles
+        _changeSingleTileIndex = EditorGUILayout.Popup(_changeSingleTileIndex, _changeTileTypeOptions);
+        if (GUILayout.Button("Change Single Tile Type"))
+            current.ChangeSingleTileType(_changeTileTypeOptions[_changeSingleTileIndex]);
 
         if (GUILayout.Button("Grow"))
             current.Grow();
@@ -40,13 +58,18 @@ public class BoardCreatorInspector : Editor {
         if (GUILayout.Button("Grow Area"))
             current.GrowArea();
         if (GUILayout.Button("Shrink Area"))
+
             current.ShrinkArea();
-        if (GUILayout.Button("Add Obstacle"))
-            current.AddObstacle();
-        if (GUILayout.Button("Remove Obstacle"))
-            current.RemoveObstacle();
+
+        _contentIndex = EditorGUILayout.Popup(_contentIndex, _contentOptions);
+        if (GUILayout.Button("Add Content"))
+            current.AddContent(_contentOptions[_contentIndex]);
+        if (GUILayout.Button("Remove Content"))
+            current.RemoveContent();
+
+        levelName = EditorGUILayout.TextField("Level Name: ", levelName);
         if (GUILayout.Button("Save"))
-            current.Save();
+            current.Save(levelName);
         if (GUILayout.Button("Load"))
             current.Load();
 

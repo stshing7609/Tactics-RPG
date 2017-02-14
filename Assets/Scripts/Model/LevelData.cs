@@ -10,5 +10,6 @@ public class LevelData : ScriptableObject {
     // remember, its (x, height, y)
     public List<Vector3> tiles;
     public List<string> terrainTypes;
-    public List<Vector2> obstacles;
+    public List<Vector2> content;
+    public List<string> contentPaths;
 }

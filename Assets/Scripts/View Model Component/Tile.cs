@@ -11,6 +11,7 @@ public class Tile : MonoBehaviour {
 
     public string terrainTypeName = "Sand";
     public Obstacle obs;
+    public GameObject content;
     // TO BE USED LATER FOR ANY TILES THAT WILL HAVE EFFECTS
     // EFFECT TILES WILL INHERIT FROM TILE.CS
     public bool hasEffect = false;
@@ -18,10 +19,16 @@ public class Tile : MonoBehaviour {
     public bool passable = true;
 
     // any time a tile's height or position is changed, visually reflect its new values
-    void Match ()
+    public void Match ()
     {
         transform.localPosition = new Vector3(pos.x, height * stepHeight / 2f, pos.y);
         transform.localScale = new Vector3(1, height * stepHeight, 1);
+        if (content != null)
+        {
+            PlaceableObject po = content.GetComponent<PlaceableObject>();
+            po.tile = this;
+            po.Match();
+        }
     }
 
     // the board will be created by randomly growing or shrinking tiles
