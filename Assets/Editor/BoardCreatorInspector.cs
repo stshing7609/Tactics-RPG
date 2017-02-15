@@ -13,7 +13,13 @@ public class BoardCreatorInspector : Editor {
     // options for changing existing tiles
     string[] _changeTileTypeOptions = { "Sand", "Grass", "Water" };
     int _changeSingleTileIndex = 0;
-    
+
+    // options for changing existing tiles
+    string[] _contentOptions = { "Obstacle", "TestObstacle" };
+    int _contentIndex = 0;
+
+    string levelName;
+
     // make sure out target is of the right type (BoardCreator)
     public BoardCreator current
     {
@@ -53,13 +59,18 @@ public class BoardCreatorInspector : Editor {
         if (GUILayout.Button("Grow Area"))
             current.GrowArea();
         if (GUILayout.Button("Shrink Area"))
+
             current.ShrinkArea();
-        if (GUILayout.Button("Add Obstacle"))
-            current.AddObstacle();
-        if (GUILayout.Button("Remove Obstacle"))
-            current.RemoveObstacle();
+
+        _contentIndex = EditorGUILayout.Popup(_contentIndex, _contentOptions);
+        if (GUILayout.Button("Add Content"))
+            current.AddContent(_contentOptions[_contentIndex]);
+        if (GUILayout.Button("Remove Content"))
+            current.RemoveContent();
+
+        levelName = EditorGUILayout.TextField("Level Name: ", levelName);
         if (GUILayout.Button("Save"))
-            current.Save();
+            current.Save(levelName);
         if (GUILayout.Button("Load"))
             current.Load();
 

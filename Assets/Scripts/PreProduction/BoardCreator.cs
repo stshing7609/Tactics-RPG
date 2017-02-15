@@ -20,7 +20,14 @@ public class BoardCreator : MonoBehaviour {
     {
         get
         {
-            if (_marker == null)
+            // if we have a tile selection indicator, use that
+            if (GameObject.Find(tileSelectionIndicatorPrefab.name) != null)
+            {
+                GameObject instance = GameObject.Find(tileSelectionIndicatorPrefab.name);
+                _marker = instance.transform;
+            }
+            // else follow the normal patter of lazy loading
+            else if (_marker == null)
             {
                 GameObject instance = Instantiate(tileSelectionIndicatorPrefab) as GameObject;
                 _marker = instance.transform;
@@ -35,7 +42,8 @@ public class BoardCreator : MonoBehaviour {
     public int height = 8; // number of step units as defined by Tile script - affects things like jump heights on units
     public Point pos; // used to find specific point in board in case we wish to make modifications to the board
     public Dictionary<Point, Tile> tiles = new Dictionary<Point, Tile>();  // dictionary of tiles and their locations
-    public Dictionary<Point, Obstacle> obstacles = new Dictionary<Point, Obstacle>();
+    public Dictionary<Point, PlaceableObject> contentDict = new Dictionary<Point, PlaceableObject>(); // dictionary of placeable objects and their locations
+    public Dictionary<Point, string> contentPaths = new Dictionary<Point, string>(); // dictionary of placeobject locations and their types
 
     public LevelData levelData; // load in any saved level data
 
@@ -49,7 +57,9 @@ public class BoardCreator : MonoBehaviour {
         for (int i = transform.childCount - 1; i >= 0; i--)
             DestroyImmediate(transform.GetChild(i).gameObject);
         tiles.Clear(); // clear the tile dictionary
-        obstacles.Clear(); // clear obstacle dictionary
+        contentDict.Clear(); // clear the placeobject dictionary
+        contentPaths.Clear(); // clear the paths to placeable objects dictionary
+
         _terrainType = "Sand"; // reset terrainType to Sand
     }
 
@@ -99,36 +109,58 @@ public class BoardCreator : MonoBehaviour {
         marker.localPosition = t != null ? t.center : new Vector3(pos.x, 0, pos.y);
     }
 
-    // add an obstacle
-    public void AddObstacle()
+    // add content on a tile
+    public void AddContent(string content)
     {
-        Tile t = tiles.ContainsKey(pos) ? tiles[pos] : null; // make sure a tile exists first
-        // check to see if there's already an obstacle
-        if(!obstacles.ContainsKey(pos))
-        {
-            Obstacle o = CreateObstacle();
-            o.Load(ref t, pos); // the obstacle is on the tile we checked
-            t.AddObstacle(o); // make sure the tile knows it has an obstacle
-            obstacles.Add(pos, o); // add the obstacle to the dictionary
-        }
+        if (!tiles.ContainsKey(pos))  // make sure a tile exists first
+            return;
+        if (contentDict.ContainsKey(pos)) // check if there's something on the tile already
+            return;
+
+        Tile t = tiles[pos]; // get the tile
+
+        // make the placeable object
+        PlaceableObject po = CreateContent(content);
+
+        // place the placeable object
+        if (po != null)
+            po.Place(t);
+
+        // reposition everything
+        t.Match();
+
+        // add to dictionaries
+        contentDict.Add(pos, po);
+        contentPaths.Add(pos, content);
     }
 
-    // remove an obstacle
-    public void RemoveObstacle()
+    // remove content from a tile
+    public void RemoveContent()
     {
-        Obstacle o = obstacles.ContainsKey(pos) ? obstacles[pos] : null; // check if the obstacle exists
-        if(o)
-        {
-            Tile t = tiles[pos]; // find the tile its on (this cannot be null since obstacles can only be made on tiles)
-            t.RemoveObstacle(); // remove the reference to this obstacle
-            obstacles.Remove(pos); // remove the obstacle from the dictionary
-            DestroyImmediate(o.gameObject); // destroy the obstacle
-        }
+        // make sure a tile exists first
+        if (!tiles.ContainsKey(pos))
+            return;
+        // then make sure the content exists
+        if (!contentDict.ContainsKey(pos))
+            return;
+
+        Tile t = tiles[pos];
+        // remove everything and destroy the content
+        contentDict.Remove(pos);
+        contentPaths.Remove(pos);
+        DestroyImmediate(t.content.gameObject);
+        t.content = null;
     }
 
     // lets a user save a level using the LevelData class since it's a ScriptableObject
-    public void Save()
+    public void Save(string name)
     {
+        if(name.Equals(""))
+        {
+            Debug.Log("Invalid file name");
+            return;
+        }
+        
         // try to access Resources/Levels in our App
         string filePath = Application.dataPath + "/Resources/Levels";
         if (!Directory.Exists(filePath))
@@ -139,18 +171,27 @@ public class BoardCreator : MonoBehaviour {
         // instantiate the lists of levelData
         board.tiles = new List<Vector3>(tiles.Count);
         board.terrainTypes = new List<string>(tiles.Count);
-        board.obstacles = new List<Vector2>(obstacles.Count);
+        board.content = new List<Vector2>(contentDict.Count);
+        board.contentPaths = new List<string>(contentPaths.Count);
         // save tile parameters in those lists
         foreach (Tile t in tiles.Values)
         {
             board.tiles.Add(new Vector3(t.pos.x, t.height, t.pos.y));
             board.terrainTypes.Add(t.terrainTypeName);
         }
-        // save obstacle position data
-        foreach (Obstacle o in obstacles.Values)
+
+        // save placeable object positions
+        foreach(PlaceableObject po in contentDict.Values)
         {
-            board.obstacles.Add(new Vector2(o.pos.x, o.pos.y));
+            board.content.Add(new Vector2(po.tile.pos.x, po.tile.pos.y));
         }
+
+        // save placeable object types
+        foreach(string s in contentPaths.Values)
+        {
+            board.contentPaths.Add(s);
+        }
+      
         // name and create the asset
         string fileName = string.Format("Assets/Resources/Levels/{1}.asset", filePath, name);
         AssetDatabase.CreateAsset(board, fileName);
@@ -161,14 +202,17 @@ public class BoardCreator : MonoBehaviour {
     {
         Clear();
         if (levelData == null)
+        {
+            Debug.Log("No level selected");
             return;
+        }
 
         // if this isn't true, something is wrong, so exit the function
-        if (levelData.tiles.Count != levelData.terrainTypes.Count)
+        if (levelData.tiles.Count != levelData.terrainTypes.Count || levelData.content.Count != levelData.contentPaths.Count)
             return;
-        
-        // populate our dictionary with data from levelData
-        for(int i = 0; i < levelData.tiles.Count; i++)
+
+        // populate our tile dictionary with data from levelData
+        for (int i = 0; i < levelData.tiles.Count; i++)
         {
             Vector3 v = levelData.tiles[i];
             string s = levelData.terrainTypes[i];
@@ -177,16 +221,17 @@ public class BoardCreator : MonoBehaviour {
             tiles.Add(t.pos, t);
         }
 
-        // populate obstacles
-        foreach(Vector2 v in levelData.obstacles)
+        // populate out placeable object dictionaries with data from levelData
+        for (int i = 0; i < levelData.content.Count; i++)
         {
-            Obstacle o = CreateObstacle();
-            Point tempP;
-            tempP.x = (int)v.x;
-            tempP.y = (int)v.y;
-            Tile tempT = tiles[tempP];
-            o.Load(ref tempT, tempP); // due to Match() being called, this should realign positioning
-            obstacles.Add(o.pos, o);
+            PlaceableObject po = CreateContent(levelData.contentPaths[i]);
+            Vector2 v = levelData.content[i];
+            Point tempPos = new Point((int)v.x,(int)v.y);
+            Tile t = tiles[tempPos];
+            po.Place(t);
+            po.Match();
+            contentDict.Add(po.tile.pos, po);
+            contentPaths.Add(po.tile.pos, levelData.contentPaths[i]);
         }
     }
 
@@ -235,11 +280,14 @@ public class BoardCreator : MonoBehaviour {
         return instance.GetComponent<Tile>();
     }
 
-    Obstacle CreateObstacle()
+    // create placeable object from the name of object we want
+    PlaceableObject CreateContent(string name)
     {
-        GameObject instance = Instantiate(obstacleViewPrefab) as GameObject;
+        // look for the prefab from Resources/PlaceableObjects
+        GameObject prefab = Resources.Load<GameObject>("PlaceableObjects/" + name);
+        GameObject instance = GameObject.Instantiate(prefab);
         instance.transform.parent = transform;
-        return instance.GetComponent<Obstacle>();
+        return instance.GetComponent<PlaceableObject>();
     }
 
     // check if the Tile is in the dictionary and if not create it. then return
@@ -295,14 +343,15 @@ public class BoardCreator : MonoBehaviour {
         if (t.height <= 0)
         {
             tiles.Remove(p);
-            DestroyImmediate(t.gameObject);
-            // if the tile had an obstacle, properly destroy the obstacle too
-            if(t.obs != null)
+            // destroy any content on it too
+            if (contentDict.ContainsKey(p) && contentPaths.ContainsKey(p))
             {
-                Obstacle tempO = obstacles[p];
-                obstacles.Remove(p);
-                DestroyImmediate(tempO.gameObject);
+                contentDict.Remove(p);
+                contentPaths.Remove(p);
+                DestroyImmediate(t.content.gameObject);
+                t.content = null;
             }
+            DestroyImmediate(t.gameObject);
         }
     }
 
