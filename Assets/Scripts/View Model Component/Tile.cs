@@ -10,13 +10,16 @@ public class Tile : MonoBehaviour {
     public Vector3 center { get { return new Vector3(pos.x, height * stepHeight, pos.y); } }
 
     public string terrainTypeName = "Sand";
-    public Obstacle obs;
     public GameObject content;
     // TO BE USED LATER FOR ANY TILES THAT WILL HAVE EFFECTS
     // EFFECT TILES WILL INHERIT FROM TILE.CS
     public bool hasEffect = false;
     // TO BE USED LATER FOR CHECKING MOVEMENT
     public bool passable = true;
+
+    // used for pathfinding
+    [HideInInspector] public Tile prev; // tile checked previously
+    [HideInInspector] public int distance; // distance from starting tile
 
     // any time a tile's height or position is changed, visually reflect its new values
     public void Match ()
@@ -42,17 +45,6 @@ public class Tile : MonoBehaviour {
     {
         height--;
         Match();
-    }
-
-    public void AddObstacle(Obstacle o)
-    {
-        obs = o;
-    }
-
-    public void RemoveObstacle()
-    {
-        if (obs)
-            obs = null;
     }
 
     //overload Load so that we can persist Tile data as Vector3

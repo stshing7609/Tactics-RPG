@@ -320,9 +320,6 @@ public class BoardCreator : MonoBehaviour {
         if (t.height < height)
         {
             t.Grow();
-            // if there's an obstacle, correctly reposition it
-            if(t.obs != null)
-                t.obs.Match();
         }
     }
 
@@ -336,8 +333,6 @@ public class BoardCreator : MonoBehaviour {
 
         Tile t = tiles[p];
         t.Shrink();
-        if(t.obs != null)
-            t.obs.Match();
 
         // destroy the tile if is equal or below 0 height (this is how we make gaps in the board)
         if (t.height <= 0)

@@ -17,9 +17,9 @@ public class InitBattleState : BattleState {
         if (_initOnce)
         {
             _initOnce = false;
-            board.Load(levelData);
+            //board.Load(levelData);
             Point p = new Point((int)levelData.tiles[0].x, (int)levelData.tiles[0].z);
-            SelectTile(p);
+            //SelectTile(p);
             yield return null;
             owner.ChangeState<MoveTargetState>();
         }

@@ -24,8 +24,5 @@ public abstract class PlaceableObject : MonoBehaviour {
     // correctly position the object relative to the tile
     // can be overriden, but will almost always have the object be directly over the center of the tile
     // REMEMBER TO CALL BASE
-    public virtual void Match()
-    {
-        transform.localPosition = new Vector3(tile.pos.x, tile.center.y + transform.localScale.y, tile.pos.y);
-    }
+    public abstract void Match();
 }

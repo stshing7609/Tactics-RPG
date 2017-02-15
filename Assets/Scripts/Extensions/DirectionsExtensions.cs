@@ -14,7 +14,7 @@ public static class DirectionsExtensions {
         return Directions.West;
     }
 
-    public static Vector3 ToEuler(Directions d)
+    public static Vector3 ToEuler(this Directions d)
     {
         return new Vector3(0, (int)d * 90, 0);
     }

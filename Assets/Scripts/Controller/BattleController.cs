@@ -11,6 +11,8 @@ public class BattleController : StateMachine {
 
     void Start()
     {
-        ChangeState<InitBattleState>();
+        board = GetComponentInChildren<Board>();
+        levelData = Resources.Load<LevelData>(string.Format("Levels/Level_{0}", Board.level));
+        ChangeState<MoveTargetState>();
     }
 }
